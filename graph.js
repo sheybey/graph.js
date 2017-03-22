@@ -90,24 +90,34 @@ document.addEventListener('DOMContentLoaded', function () {
         if (focused !== undefined) {
             ctx.strokeStyle = ctx.fillStyle = 'black';
             ctx.strokeRect(10, 10, 100, 70);
-            ctx.fillText('Point ' + points.findIndex(function (point) {
-                return Object.is(point, focused);
-            }), 20, 25, 80);
+            ctx.fillText(
+                'Point ' + points.findIndex(function (point) {
+                    return Object.is(point, focused);
+                }),
+                20,
+                25,
+                80
+            );
             ctx.fillText(
                 focused.x + ', ' + focused.y,
                 20,
                 45,
                 80
             );
-            ctx.fillText(connections.reduce(
-                function (accum, connection) {
-                    if (connection.contains(focused)) {
-                        return accum + 1;
-                    }
-                    return accum;
-                },
-                0
-            ) + ' neighbors', 20, 65, 80);
+            ctx.fillText(
+                connections.reduce(
+                    function (accum, connection) {
+                        if (connection.contains(focused)) {
+                            return accum + 1;
+                        }
+                        return accum;
+                    },
+                    0
+                ) + ' neighbors',
+                20,
+                65,
+                80
+            );
         }
         connections.forEach(function (connection) {
             connection.draw();
