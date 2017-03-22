@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var points = [];
     var connections = [];
     var mouse = {
+        down: false,
         dragged: false,
         dragThreshold: 3,
         button: undefined,
@@ -15,13 +16,17 @@ document.addEventListener('DOMContentLoaded', function () {
         target2: undefined,
         connection: undefined
     };
+    var focused = undefined;
 
     function Point(x, y) {
         this.x = x;
         this.y = y;
     }
     Point.prototype.draw = function (color) {
-        ctx.strokeStyle = color || 'black';
+        ctx.strokeStyle = ctx.fillStyle = (
+            color ||
+            (Object.is(this, focused) ? 'blue' : 'black')
+        );
         ctx.beginPath();
         ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI, true);
         ctx.fill();
@@ -46,7 +51,10 @@ document.addEventListener('DOMContentLoaded', function () {
         this.p2 = p2;
     }
     Connection.prototype.draw = function (color) {
-        ctx.strokeStyle = color || 'black';
+        ctx.strokeStyle = (
+            color ||
+            (this.contains(focused) ? 'blue' : 'black')
+        );
         ctx.beginPath();
         ctx.moveTo(this.p1.x, this.p1.y);
         ctx.lineTo(this.p2.x, this.p2.y);
@@ -79,6 +87,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function drawAll() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (focused !== undefined) {
+            ctx.strokeStyle = ctx.fillStyle = 'black';
+            ctx.strokeRect(10, 10, 100, 70);
+            ctx.fillText('Point ' + points.findIndex(function (point) {
+                return Object.is(point, focused);
+            }), 20, 25, 80);
+            ctx.fillText(
+                focused.x + ', ' + focused.y,
+                20,
+                45,
+                80
+            );
+            ctx.fillText(connections.reduce(
+                function (accum, connection) {
+                    if (connection.contains(focused)) {
+                        return accum + 1;
+                    }
+                    return accum;
+                },
+                0
+            ) + ' neighbors', 20, 65, 80);
+        }
         connections.forEach(function (connection) {
             connection.draw();
         });
@@ -103,36 +133,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return undefined;
     }
 
-    function drag(event) {
-        var point = new Point(event.clientX, event.clientY);
-        var connection;
-
-        if (!mouse.dragged) {
-            if (point.distanceTo(mouse.point) >= mouse.dragThreshold) {
-                mouse.dragged = true;
-            }
-        }
-
-        if (mouse.dragged) {
-            if (mouse.button === 0) {
-                mouse.target.copy(point);
-                drawAll();
-            } else if (mouse.button === 2 && mouse.target !== undefined) {
-                connection = new Connection(mouse.target);
-                mouse.target2 = findTarget(point, [mouse.target]);
-                if (mouse.target2 !== undefined) {
-                    mouse.connection = connection;
-                    connection.p2 = mouse.target2;
-                } else {
-                    delete mouse.connection;
-                    connection.p2 = point;
-                }
-                drawAll();
-                connection.draw('red');
-            }
-        }
-    }
-
     function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -140,17 +140,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (Array.prototype.find === undefined) {
-        alert('Use something other than internet explorer. Edge works, as do blink/webkit or gecko based browsers.');
+        alert('Use something other than internet explorer. Edge works, as ' +
+            'do blink/webkit or gecko based browsers.');
         return;
     }
-
-    ctx.fillStyle = 'black';
 
     canvas.addEventListener('mousedown', function (event) {
         event.preventDefault();
 
-        canvas.addEventListener('mousemove', drag);
-
+        mouse.down = true;
         mouse.dragged = false;
         mouse.button = event.button;
         mouse.point = new Point(event.clientX, event.clientY);
@@ -158,16 +156,51 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (mouse.button === 0) {
             if (mouse.target === undefined) {
-                mouse.target = mouse.point;
+                mouse.target = focused = mouse.point;
                 points.push(mouse.point);
                 mouse.point.draw();
             }
         }
     });
 
+    canvas.addEventListener('mousemove', function (event) {
+        var point = new Point(event.clientX, event.clientY);
+        var connection;
+
+        focused = findTarget(point);
+        drawAll();
+
+        if (mouse.down) {
+            if (!mouse.dragged) {
+                if (point.distanceTo(mouse.point) >= mouse.dragThreshold) {
+                    mouse.dragged = true;
+                }
+            }
+
+            if (mouse.dragged) {
+                if (mouse.button === 0) {
+                    mouse.target.copy(point);
+                } else if (mouse.button === 2 && mouse.target !== undefined) {
+                    connection = new Connection(mouse.target);
+                    mouse.target2 = findTarget(point, [mouse.target]);
+                    if (mouse.target2 !== undefined) {
+                        mouse.connection = connection;
+                        connection.p2 = mouse.target2;
+                    } else {
+                        delete mouse.connection;
+                        connection.p2 = point;
+                    }
+                    connection.draw('red');
+                }
+            }
+        }
+    });
+
     canvas.addEventListener('mouseup', function () {
         var connectionIndex;
-        canvas.removeEventListener('mousemove', drag);
+
+        mouse.down = false;
+
         if (!mouse.dragged) {
             if (mouse.button === 2 && mouse.target !== undefined) {
                 remove(points, mouse.target);
@@ -176,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         remove(connections, connection);
                     }
                 });
+                focused = undefined;
             }
         } else {
             if (mouse.button === 2 && mouse.connection !== undefined) {
@@ -199,4 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     resize();
     window.addEventListener('resize', resize);
+
+    ctx.fillStyle = ctx.strokeStyle = 'black';
+    ctx.font = '12px sans-serif';
 });
