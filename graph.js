@@ -37,9 +37,9 @@ document.addEventListener('DOMContentLoaded', function () {
         this.y = other.y;
     };
     Point.prototype.distanceTo = function (other) {
-        return Math.sqrt(
-            Math.pow(Math.abs(other.x - this.x), 2) +
-            Math.pow(Math.abs(other.y - this.y), 2)
+        return Math.hypot(
+            Math.abs(other.x - this.x),
+            Math.abs(other.y - this.y)
         );
     };
     Point.prototype.collides = function (other) {
