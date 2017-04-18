@@ -69,6 +69,9 @@ document.addEventListener('DOMContentLoaded', function () {
     Connection.prototype.contains = function (point) {
         return Object.is(point, this.p1) || Object.is(point, this.p2);
     };
+    Connection.prototype.loop = function () {
+        return Object.is(this.p1, this.p2);
+    }
 
     function remove(array, object) {
         array.splice(array.findIndex(function (o) {
@@ -222,7 +225,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 focused = undefined;
             }
         } else {
-            if (mouse.button === 2 && mouse.connection !== undefined) {
+            if (mouse.button === 2 && mouse.connection !== undefined &&
+                !mouse.connection.loop()) {
                 connectionIndex = connections.findIndex(function (c) {
                     return c.equals(mouse.connection);
                 });
